@@ -8,18 +8,18 @@ import os
 
 
 
-DEV_ROOT = './Data/FSD50K.dev_audio/'
-TEST_ROOT = './Data/FSD50K.eval_audio/'
+DEV_ROOT = 'D:/Downloads/FSD50K.dev_audio/'
+TEST_ROOT = 'G:/FSD50K.eval_audio/FSD50K.eval_audio/'
 
-raw_dev_df = pd.read_csv('./Data/FSD50K.ground_truth/dev.csv', dtype={'fname': 'string'})
+raw_dev_df = pd.read_csv("C:/Users/Harry/Desktop/FSD50K.ground_truth/FSD50K.ground_truth/dev.csv", dtype={'fname': 'string'})
 
 train_df = raw_dev_df[raw_dev_df['split'] == 'train'].drop(columns=['split']).copy()
 val_df = raw_dev_df[raw_dev_df['split'] == 'val'].drop(columns=['split']).copy()
-test_df = pd.read_csv('./Data/FSD50K.ground_truth/eval.csv', dtype={'fname': 'string'})
-vocab_df = pd.read_csv('./Data/FSD50K.ground_truth/vocabulary.csv', index_col=0, header=None, names=['label','mids'])
+test_df = pd.read_csv("C:/Users/Harry/Desktop/FSD50K.ground_truth/FSD50K.ground_truth/eval.csv", dtype={'fname': 'string'})
+vocab_df = pd.read_csv('C:/Users/Harry/Desktop/FSD50K.ground_truth/FSD50K.ground_truth/vocabulary.csv', index_col=0, header=None, names=['label','mids'])
 vocab_dict = dict(zip(vocab_df.mids, vocab_df.label))
 
-files_list = ['63','699']
+files_list = os.listdir(TEST_ROOT)
 lf = len(files_list)
 
 
@@ -30,12 +30,12 @@ def replicate(data, min_clip_len):
   return data
 
 # Saving so that we only need to do this once
-PARTS_DIR = './Data/Chunks/'
+PARTS_DIR = 'D:/Data/Chunks_test/'
 def process_idx(idx):
   # print("in pool: "+str(idx))
   # return idx
-  file_name = files_list[idx]
-  file_path = DEV_ROOT + file_name + '.wav'
+  file_name = files_list[idx].split(".")[0]
+  file_path = TEST_ROOT + file_name + '.wav'
   data, sample_rate = librosa.load(file_path)
   min_clip_len = int(sample_rate * 1)
   parts = []
