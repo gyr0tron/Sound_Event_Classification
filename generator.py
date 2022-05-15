@@ -33,9 +33,13 @@ test_df['output_vec'] = output_vec.tolist()
 train_df = raw_dev_df[raw_dev_df['split'] == 'train']
 val_df = raw_dev_df[raw_dev_df['split'] == 'val']
 
+WINDOW_FACTOR = 512  # 512*40=20480 -> try 256,128,64
+OVERLAP_FACTOR = 2 # 1->0%, 4->25%, 2->50%, 4->75%
+MULTIPLICATIVE_FACTOR = 1 # 3 for 25% overlap, 1 for rest
+
 def replicate(data, min_clip_len):
   if len(data) < min_clip_len:
-    tile_size = (min_clip_len // data.shape[0]) + 1
+    tile_size = ((min_clip_len // OVERLAP_FACTOR) * MULTIPLICATIVE_FACTOR)
     data = np.tile(data, tile_size)[:min_clip_len]
   return data
 
@@ -44,13 +48,16 @@ def extract_features(fname_list,output_vec_list,DIR,bands=60,frames=41):
         start = 0
         while start < len(data):
             yield int(start), int(start + window_size)
-            start += (window_size // 2) # 50% overlap
+            start += ((window_size // OVERLAP_FACTOR) * MULTIPLICATIVE_FACTOR) # 50% overlap
             
-    window_size = 512 * (frames - 1)
+    window_size = WINDOW_FACTOR * (frames - 1)
     # min_clip_len = int(22050 * 1)
     min_clip_len = window_size
     features, labels = [], []
-    for idx,file_name in enumerate(tqdm(fname_list)):
+    
+    for idx,file_name in enumerate(fname_list):
+        if (idx%1000==0):
+          print(f'Working on file number: {idx}')
         fn = DIR + file_name + '.wav'
         segment_log_specgrams, segment_labels = [], []
         sound_clip,sr = librosa.load(fn)
@@ -81,17 +88,20 @@ def extract_features(fname_list,output_vec_list,DIR,bands=60,frames=41):
 
 STORE_DIR = './Data/Checkpoints/'
 
-features, labels = extract_features(train_df['fname'].to_list(), train_df['output_vec'].to_list(), DEV_ROOT)
+print('='*20 + 'Generating Train Features!' + '='*20)
+features, labels = extract_features(train_df['fname'][:100].to_list(), train_df['output_vec'][:100].to_list(), DEV_ROOT)
 print('='*20 + 'Train Features Generated!' + '='*20)
-np.savez_compressed(STORE_DIR+'train', features=np.asarray(features,dtype=object), labels=np.asarray(labels,dtype=object))
+np.savez_compressed(STORE_DIR+'train_'+str(int(100-((1/OVERLAP_FACTOR)*MULTIPLICATIVE_FACTOR)*100)), features=np.asarray(features,dtype=object), labels=np.asarray(labels,dtype=object))
 print('='*20 + 'Train npz saved!' + '='*20)
 
-features, labels = extract_features(val_df['fname'].to_list(), val_df['output_vec'].to_list(), DEV_ROOT)
+print('='*20 + 'Generating Valid Features!' + '='*20)
+features, labels = extract_features(val_df['fname'][:100].to_list(), val_df['output_vec'][:100].to_list(), DEV_ROOT)
 print('='*20 + 'Valid Features Generated!' + '='*20)
-np.savez_compressed(STORE_DIR+'val', features=np.asarray(features,dtype=object), labels=np.asarray(labels,dtype=object))
+np.savez_compressed(STORE_DIR+'val_'+str(int(100-((1/OVERLAP_FACTOR)*MULTIPLICATIVE_FACTOR)*100)), features=np.asarray(features,dtype=object), labels=np.asarray(labels,dtype=object))
 print('='*20 + 'Valid npz saved!' + '='*20)
 
-features, labels = extract_features(test_df['fname'].to_list(), test_df['output_vec'].to_list(), TEST_ROOT)
+print('='*20 + 'Generating Test Features!' + '='*20)
+features, labels = extract_features(test_df['fname'][:100].to_list(), test_df['output_vec'][:100].to_list(), TEST_ROOT)
 print('='*20 + 'Test Features Generated!' + '='*20)
-np.savez_compressed(STORE_DIR+'test', features=np.asarray(features,dtype=object), labels=np.asarray(labels,dtype=object))
+np.savez_compressed(STORE_DIR+'test_'+str(int(100-((1/OVERLAP_FACTOR)*MULTIPLICATIVE_FACTOR)*100)), features=np.asarray(features,dtype=object), labels=np.asarray(labels,dtype=object))
 print('='*20 + 'Test npz saved!' + '='*20)
